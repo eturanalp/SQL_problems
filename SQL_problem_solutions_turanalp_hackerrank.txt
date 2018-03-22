@@ -1,0 +1,528 @@
+Reporting student grades:
+--SELECT s.ID,s.NAME,s.MARKS, g.GRADE
+--FROM STUDENTS s, GRADES g
+--WHERE s.MARKS<=g.MAX_MARK AND s.MARKS>=g.MIN_MARK
+--ORDER BY g.GRADE DESC, s.NAME ASC
+SELECT 
+   CASE   
+      WHEN g.GRADE >=8 THEN s.NAME   
+      ELSE 'NULL'   
+   END as NAME,   
+   g.GRADE as GRADE,
+   s.MARKS as MARKI
+FROM STUDENTS s
+JOIN GRADES g
+ON s.MARKS<=g.MAX_MARK AND s.MARKS>=g.MIN_MARK
+ORDER BY g.GRADE DESC, s.NAME ASC
+
+--------------------------------------------------------
+TOP COMPETITORS
+Write a query to print the respective hacker_id and name of hackers who achieved full scores for morethanone challenge. Order your output in descending order by the total number of challenges in which the hacker earned a full score. If more than one hacker received full scores in same number of challenges, then sort them by ascending hacker_id
+--   hacker_id,name
+--Submissions(submission_id,hacker_id,challenge_id,score), 
+--Challenges(challenge_id,hacker_id.difficulty_level), 
+--Difficulty(difficulty_level,score), 
+--Hackers(hacker_id,name)
+SELECT h.hacker_id, h.name
+FROM Hackers h, Challenges c, Difficulty d, Submissions s
+WHERE h.hacker_id=s.hacker_id AND s.challenge_id=c.challenge_id AND c.difficulty_level=d.difficulty_level AND s.score=d.score
+GROUP BY h.hacker_id, h.name
+HAVING COUNT(h.hacker_id)>1
+ORDER BY COUNT(h.hacker_id) DESC, h.hacker_id ASC
+
+--SELECT * FROM Submissions
+--WHERE hacker_id=39771;
+--SELECT * FROM Challenges c,Difficulty d WHERE c.difficulty_level=d.difficulty_level 
+
+-------------------------------------------------------------
+Ollivander's Inventory
+Write a query to print the id, age, coins_needed, and power of the wands that Ron's interested in, sorted in order of descending power. If more than one wand has same power, sort the result in order of descending age.
+
+--id, age, coins_needed, and power || to buy each non-evil wand of high power and age
+--Wands(id, code, coins_needed, power) 
+--Wands_Property(code,age,is_evil)
+-- The following query was not accepted by the hackerrank evaluation engine. Why?
+--WITH CTE(age,coins,power) AS (
+--SELECT wp.age, MIN(w.coins_needed), w.power FROM Wands w, Wands_Property wp
+--WHERE w.code=wp.code AND wp.is_evil=0
+--GROUP BY w.power, wp.age)
+--SELECT w.id as id , c.age as age , c.coins as coins_needed, c.power as power FROM Wands w, CTE c, Wands_Property wp
+--WHERE c.coins=w.coins_needed AND w.power=c.power AND w.code=wp.code AND wp.is_evil=0
+--ORDER BY c.power DESC, c.age DESC
+-- Working query:
+SELECT id, age, coins_needed, power FROM (
+SELECT w.id, wp.age, w.coins_needed, w.power, 
+ RANK() OVER (PARTITION BY w.power, wp.age ORDER BY w.coins_needed ASC) as rank1
+FROM Wands w, Wands_Property wp
+WHERE w.code=wp.code AND wp.is_evil=0 ) aa
+WHERE aa.rank1=1
+ORDER BY power DESC, age DESC
+
+------------------------------------------------
+CHALLENGES
+Julia asked her students to create some coding challenges. Write a query to print the hacker_id, name, and the total number of challenges created by each student. Sort your results by the total number of challenges in descending order. If more than one student created the same number of challenges, then sort the result by hacker_id. If more than one student created the same number of challenges and the count is less than the maximum number of challenges created, then exclude those students from the result.
+--hacker_id, name, and the total number of challenges created by each student. 
+--Hackers(hacker_id,name)
+--Challenges(challenge_id, hacker_id)
+
+SELECT c.hacker_id, MIN(h.name), COUNT(c.hacker_id) as challenges_created
+FROM Challenges c, Hackers h
+WHERE c.hacker_id=h.hacker_id 
+GROUP BY c.hacker_id
+HAVING COUNT(c.hacker_id) NOT IN(  --excluded "number of challenges"
+   SELECT cc.challenges_created
+   FROM (SELECT hacker_id as hid, COUNT(hacker_id) as challenges_created
+      FROM Challenges
+      GROUP BY hacker_id) as cc
+      GROUP BY challenges_created
+      HAVING COUNT(hid) >1 AND 
+         cc.challenges_created <(   
+         SELECT MAX(dd.challenges_created) FROM (
+            SELECT hacker_id, COUNT(hacker_id) as challenges_created
+            FROM Challenges
+            GROUP BY hacker_id) as dd
+       )
+    )
+ORDER BY challenges_created DESC, c.hacker_id ASC
+
+/*
+SELECT hacker_id, COUNT(hacker_id) as challenges_created
+           FROM Challenges
+           GROUP BY hacker_id
+           */
+
+--------------------------------------------------------------------------
+Contest Leaderboard
+The total score of a hacker is the sum of their maximum scores for all of the challenges. Write a query to print the hacker_id, name, and total score of the hackers ordered by the descending score. If more than one hacker achieved the same total score, then sort the result by ascending hacker_id. Exclude all hackers with a total score of zero from your result.
+-- hacker_id, name, total_score
+--Hackers(hacker_id,name)
+--Submisions(submision_id, hacker_id, challenge_id, score)
+SELECT per_challenge.h_id, h.name, SUM(per_challenge.maxscore)
+FROM (  -- maximum scores per hacker per challenge
+   SELECT s.hacker_id as h_id, s.challenge_id as c_id, MAX(s.score) as maxscore
+   FROM Submissions s
+   GROUP BY s.hacker_id, s.challenge_id
+   HAVING MAX(s.score)>0 ) as per_challenge, Hackers h
+WHERE per_challenge.h_id=h.hacker_id
+GROUP BY per_challenge.h_id, h.name
+ORDER BY SUM(per_challenge.maxscore) DESC, per_challenge.h_id ASC
+
+------------------------------------------------------------------------------
+SELECT  *
+FROM    (
+        VALUES
+        ('* * * * * * * * * * * * * * * * * * * *'),
+        ('* * * * * * * * * * * * * * * * * * *'),
+        ('* * * * * * * * * * * * * * * * * *'),
+        ('* * * * * * * * * * * * * * * * *'),
+        ('* * * * * * * * * * * * * * * *'),
+        ('* * * * * * * * * * * * * * *'),
+        ('* * * * * * * * * * * * * *'),
+        ('* * * * * * * * * * * * *'),
+        ('* * * * * * * * * * * *'),
+        ('* * * * * * * * * * *'),
+        ('* * * * * * * * * *'),
+        ('* * * * * * * * *'),
+        ('* * * * * * * *'),
+        ('* * * * * * *'),
+        ('* * * * * *'),
+        ('* * * * *'),
+        ('* * * *'),
+        ('* * *'),
+        ('* *'),
+        ('*')
+) AS q (col1)
+*/
+	declare @counter int
+    declare @counter2 int
+    DECLARE @line varchar(40);
+	set @counter = 0
+    
+	while @counter < 20
+	begin
+	    set @counter = @counter + 1
+        set @counter2=20-@counter
+        set @line = ''
+	  	while @counter2 > 0
+	       begin
+	        set @counter2 = @counter2 - 1
+	        set @line= @line + '* '
+	       end
+        print @line + '*'
+	end
+
+-------------------------------------------------------------------------
+Write a query to print all prime numbers less than or equal to 
+. Print your result on a single line, and use the ampersand (
+) character as your separator (instead of a space).
+
+DECLARE @n INT; SET @n = 1000;  -- up to @n
+DECLARE @m INT; SET @m = 3;  --start at 1
+DECLARE @k INT;
+DECLARE @result VARCHAR(8000);
+set @result='2';
+--print @result;
+WHILE @m <= @n
+BEGIN 	 
+SET @k = FLOOR(SQRT(@m)); 	
+     WHILE @k > 1 
+	   BEGIN
+	     IF @m % @k = 0 GOTO NotAPrime;	
+	     SET @k = @k - 1;
+	   END
+-- A Prime       
+set @result=@result + '&'+ Convert(varchar(11),@m)  ;
+NotAPrime:
+SET @m = @m + 1;
+END
+print @result;
+
+----------------------------------------------------------------
+Query the list of CITY names from STATION that do not end with vowels. 
+SELECT DISTINCT(CITY) FROM STATION
+WHERE CITY LIKE '%[^aeiou]'
+------------------------------------------
+SELECT NAME
+FROM STUDENTS
+WHERE MARKS>75
+ORDER BY right(NAME, 3), ID ASC
+-------------------------------------------
+Top Earners
+We define an employee's total earnings to be their monthly worked, and the maximum total earnings to be the maximum total earnings for any employee in the Employee table. Write a query to find the maximum total earnings for all employees as well as the total number of employees who have maximum total earnings. Then print these values as space-separated integers.
+SELECT TOP(1) * FROM (
+SELECT e.earnings, COUNT(employee_id) as cc
+FROM (
+   SELECT employee_id, months*salary as earnings
+   FROM EMPLOYEE ) as e
+   GROUP BY e.earnings  ) AS ee
+ORDER BY ee.earnings DESC
+----------------------------------------------------
+SELECT cast(ROUND(SUM(LAT_N),2) as decimal (15,2)), cast(ROUND(SUM(LONG_W),2) as decimal (15,2)) FROM STATION
+--------------------
+Weather Observation Station 20
+A median is defined as a number separating the higher half of a data set from the lower half. Query the median of the Northern Latitudes (LAT_N) from STATION and round your answer to 4 decimal places. 
+
+SELECT cast(ROUND(r.LAT_N,4) as decimal (15,4)) 
+FROM (
+SELECT LAT_N,
+       RANK() OVER   
+       (ORDER BY LAT_N) AS Rank
+FROM STATION) AS r
+WHERE r.Rank=FLOOR((SELECT COUNT(*) FROM STATION)/2)+1
+-----------------------------------------------------------
+interviews/problem
+
+--Contests(contest_id,hacker_id,name)
+--Colleges(college_id,contest_id)
+--Challenges(challenge_id,college_id)
+--View_Stats (challenge_id,total_views,total_unique_views)
+--Submission_Stats(challenge_id,total_submissions,total_accepted_submissions)
+--Write a query to print the contest_id, hacker_id, name, and the sums of total_submissions, total_accepted_submissions, total_views, 
+--and total_unique_views for each contest sorted by contest_id. 
+--
+/*
+SELECT c.contest_id,  c.hacker_id, c.name,
+       SUM(sub.total_submissions), SUM(sub.total_accepted_submissions), SUM(v.total_views), SUM(v.total_unique_views), 
+       COUNT(ch.challenge_id)
+FROM Contests c, Colleges co, Challenges ch, View_Stats v, Submission_Stats sub
+WHERE   c.contest_id=co.contest_id AND co.college_id=ch.college_id AND 
+    ch.challenge_id=v.challenge_id AND ch.challenge_id=sub.challenge_id 
+GROUP BY c.contest_id, c.hacker_id, c.name
+HAVING NOT (SUM(sub.total_submissions)=0 AND SUM(sub.total_accepted_submissions)=0 AND SUM(v.total_views)=0 AND SUM(v.total_unique_views)=0)
+ORDER BY c.contest_id
+*/
+
+/*
+SELECT c.contest_id,  c.hacker_id, c.name, co.college_id, ch.challenge_id, v.total_views, sub.total_submissions
+FROM Contests c, Colleges co, Challenges ch, View_Stats v, Submission_Stats sub
+WHERE   c.contest_id=858 AND c.contest_id=co.contest_id AND co.college_id=ch.college_id 
+AND     ch.challenge_id=v.challenge_id AND ch.challenge_id=sub.challenge_id 
+ORDER BY ch.challenge_id, v.total_views
+*/
+WITH submit_totals(contest_id, hid, name, sub_total_submissions, sub_total_accepted_submissions) AS
+(
+SELECT c.contest_id,  c.hacker_id, c.name,
+       SUM(sub.total_submissions), SUM(sub.total_accepted_submissions)
+FROM Contests c, Colleges co, Challenges ch, Submission_Stats sub
+WHERE   c.contest_id=co.contest_id AND co.college_id=ch.college_id AND ch.challenge_id=sub.challenge_id 
+GROUP BY c.contest_id, c.hacker_id, c.name
+--HAVING NOT (SUM(sub.total_submissions)=0 AND SUM(sub.total_accepted_submissions)=0)
+),
+view_totals(contest_id, hid, name, view_total_views, view_total_unique_views ) AS
+(
+SELECT c.contest_id,  c.hacker_id, c.name,
+       SUM(v.total_views), SUM(v.total_unique_views)
+FROM Contests c, Colleges co, Challenges ch, View_Stats v
+WHERE   c.contest_id=co.contest_id AND co.college_id=ch.college_id AND ch.challenge_id=v.challenge_id 
+GROUP BY c.contest_id, c.hacker_id, c.name
+--HAVING NOT (SUM(v.total_views)=0 AND SUM(v.total_unique_views)=0)
+)
+SELECT st.contest_id, st.hid, st.name, 
+       st.sub_total_submissions, st.sub_total_accepted_submissions, 
+       vt.view_total_views, vt.view_total_unique_views
+FROM submit_totals st,view_totals vt
+WHERE st.contest_id=vt.contest_id AND 
+NOT (st.sub_total_submissions=0 AND st.sub_total_accepted_submissions=0 AND vt.view_total_views=0 AND vt.view_total_unique_views=0)
+ORDER BY st.contest_id ASC
+--------------------------------------------------------------------
+--Hackers(hacker_id,name)
+--Submissions(submission_date, submission_id, hacker_id,score)
+--Write a query to print total number of unique hackers who made at least 1 submission each day (starting on the first day of the contest), and find the hacker_id and name of the hacker who made maximum --number of submissions each day. If more than one such hacker has a maximum number of submissions, print the lowest hacker_id. The query should print this information for each day of the contest, sorted by the date.
+
+WITH 
+QDates(q_date)
+AS (SELECT d FROM (VALUES ('2016-03-01'), ('2016-03-02'), ('2016-03-03'), ('2016-03-04'), ('2016-03-05') ) as QDates(d)),
+Freq_Submitters(fs_hid)   -- hackers who made at least 1 submission each day
+AS (SELECT s.hacker_id 
+   FROM Submissions s 
+   GROUP BY s.hacker_id 
+   HAVING COUNT(DISTINCT(submission_date))=15   -- number of days for reporting 
+   ),
+unique_hacker_by_date(q_date, freq_submitter_count)
+AS (
+    SELECT s.submission_date, COUNT(DISTINCT(s.hacker_id))
+    FROM Submissions s 
+    WHERE s.hacker_id IN (SELECT fs_hid FROM Freq_Submitters)
+    GROUP BY s.submission_date
+),
+hacker_submission_count(submission_date, hacker_id, scount)
+AS( SELECT submission_date, hacker_id, COUNT(submission_id) 
+    FROM Submissions GROUP BY submission_date, hacker_id 
+),
+daily_winners(submission_date, hacker_id, scount,rr)
+AS(
+SELECT * FROM (SELECT  submission_date, hacker_id, scount,
+               RANK() OVER (PARTITION BY submission_date ORDER BY scount DESC,hacker_id ASC) as rr
+               FROM hacker_submission_count) hh
+         WHERE hh.rr=1
+),
+devouts( q_date, freq_submitter_count)
+AS (
+SELECT submission_date, COUNT(DISTINCT(hacker_id)) --count the number of distinct days since begining
+FROM ( SELECT d.submission_date, v.hacker_id, COUNT(DISTINCT v.submission_date) num_days
+       FROM (SELECT DISTINCT(submission_date) FROM Submissions ) d, submissions v
+       where v.submission_date <= d.submission_date
+       GROUP BY d.submission_date, v.hacker_id
+       ) e
+WHERE Convert(Varchar(Max),day(submission_date)) = num_days 
+GROUP BY submission_date 
+)
+SELECT uhbd.q_date, uhbd.freq_submitter_count, dw.hacker_id, h.name 
+FROM devouts uhbd, daily_winners dw, Hackers h
+WHERE uhbd.q_date=dw.submission_date AND dw.hacker_id=h.hacker_id
+ORDER BY uhbd.q_date
+
+-----------------------------------
+SELECT continent, AVG(city.population)
+FROM city,country
+WHERE country.code=city.countrycode
+GROUP BY continent
+------------------------------------
+Weather Observation Station 5
+SELECT TOP(1) city, LEN(city) as clen FROM STATION ORDER BY clen ASC, city
+SELECT TOP(1) city, LEN(city) as clen FROM STATION ORDER BY clen DESC, city
+------------------------------------
+SELECT CAST(ROUND((MAX(LAT_N)-MIN(LAT_N))+(MAX(LONG_W)-MIN(LONG_W)),4) as decimal (15,4)) as manhtan
+FROM STATION
+--------------------------------------------
+SELECT CAST(ROUND(SQRT(SQUARE(MAX(LAT_N)-MIN(LAT_N))+SQUARE(MAX(LONG_W)-MIN(LONG_W))),4) as decimal (15,4)) as manhtan
+FROM STATION
+-------------------------------------------
+-- BST(N,P)
+--Write a query to find the node type of Binary Tree ordered by the value of the node. Output one of the following for each node:
+--Root: If node is root node.
+--Leaf: If node is leaf node.
+--Inner: If node is neither root nor leaf node.
+SELECT * 
+FROM ( SELECT b1.N as N, IIF(b3.N IS NULL, 'Leaf', IIF(b1.P IS NULL, 'Root','Inner')) as ntype
+       FROM BST b1
+       LEFT JOIN BST b2  
+       ON b1.P=b2.N
+       LEFT JOIN BST b3   -- to see if it is a parent of a node
+       ON b1.N=b3.P) ee 
+GROUP BY N, ntype
+-----------------------------------------------------------------------
+Nwe Companies
+write a query to print the company_code, founder name, total number of lead managers, total number of senior managers, total number of managers, and total number of employees. Order your output by ascending company_code.
+--Company(company_code,founder)
+--Lead_Manager(lead_manager_code,company_code)
+--Senior_Manager(senior_manager_code, lead_manager_code, company_code)
+--Manager(manager_code,senior_manager_code, lead_manager_code, company_code )
+--Employee(employee_code, manager_code,senior_manager_code, lead_manager_code, company_code)
+SELECT c.company_code, c.founder, 
+   COUNT(DISTINCT l.lead_manager_code), 
+   COUNT(DISTINCT s.senior_manager_code), 
+   COUNT(DISTINCT m.manager_code), 
+   COUNT(DISTINCT e.employee_code)
+FROM Company c,Lead_Manager l, Senior_Manager s, Manager m, Employee e
+WHERE c.company_code=l.company_code AND l.company_code=s.company_code AND s.company_code=m.company_code AND    m.company_code=e.company_code AND 
+l.lead_manager_code=s.lead_manager_code AND s.lead_manager_code=m.lead_manager_code AND e.lead_manager_code=m.lead_manager_code AND
+s.senior_manager_code=m.senior_manager_code AND m.senior_manager_code=e.senior_manager_code AND 
+m.manager_code=e.manager_code
+GROUP BY c.company_code, c.founder
+ORDER BY c.company_code
+----------------------------------
+/*
+SELECT 9.5 AS Original, CONVERT(int, 9.5) AS int, 
+    CONVERT(decimal(6,4), 9.5) AS decimal;
+SELECT REPLACE('abcdefghicde','cde',''); 
+*/
+
+SELECT 
+CEILING(AVG(CONVERT(decimal,SALARY)) - AVG(CONVERT(decimal,REPLACE(SALARY,'0',''))))
+FROM EMPLOYEES
+-----------------------------------
+--Western Longitude (LONG_W) for the largest Northern Latitude (LAT_N) in STATION that is less than 137.2345
+SELECT CAST(SUM(LAT_N) as decimal (15,4))
+FROM STATION
+WHERE LAT_N>38.7880 AND LAT_N<137.2345
+----------------------------------
+SELECT TOP(1) CAST(LONG_W as decimal (15,4))
+FROM STATION
+WHERE LAT_N<137.2345
+ORDER BY LAT_N DESC
+---------------------------------
+PLACEMENTS
+--Write a query to output the names of those students whose best friends got offered a higher salary than them. 
+--Students(ID,Name)
+--Friends(ID,Friend_ID)
+--Packages(ID,Salary)
+SELECT  s.Name
+FROM Friends f, Students s, Packages ps, Packages pf
+WHERE f.ID=s.ID AND ps.ID=f.ID AND pf.ID=f.Friend_ID
+      AND pf.Salary>ps.Salary
+ORDER BY pf.Salary
+------------------------------------------------
+Symmetric Pairs 
+--p1.X=p2.Y AND p1.Y=p2.X
+--Functions(X,Y) 
+-- Two pairs (X1, Y1) and (X2, Y2) are said to be symmetric pairs if X1 = Y2 and X2 = Y1.
+-- Write a query to output all such symmetric pairs in ascending order by the value of X.
+SELECT p1.X,p1.Y
+FROM (SELECT X,Y,ROW_NUMBER() OVER (ORDER BY X) as rowid FROM Functions) p1, 
+     (SELECT X,Y,ROW_NUMBER() OVER (ORDER BY X) as rowid FROM Functions) p2
+WHERE p1.X=p2.Y AND p1.Y=p2.X AND p1.rowid<p2.rowid
+ORDER BY p1.X
+--SELECT * FROM Functions WHERE X!=Y
+------------------------------------------------------------------
+--1. Query an alphabetically ordered list of all names in OCCUPATIONS
+--2. Query the number of ocurrences of each occupation in OCCUPATIONS
+--Occupations(Name, Occupation)
+SELECT CONCAT(Name,'(',SUBSTRING(Occupation,1,1),')')
+FROM OCCUPATIONS
+ORDER BY Name
+SELECT 'There are a total of ',COUNT(Name),' ',CONCAT(LOWER(Occupation),'s.')
+FROM OCCUPATIONS
+GROUP BY Occupation
+ORDER BY COUNT(Name), Occupation
+---------------------------------------------------------
+--PIVOT Accupations
+--Pivot the Occupation column in OCCUPATIONS so that each Name is sorted alphabetically and displayed underneath its corresponding Occupation.
+--Occupations(Name, Occupation)
+--Occupation values: Doctor, Professor, Singer or Actor
+/*
+SELECT 'OccupationTab' AS Cost_Sorted_By_Production_Days,   
+[Doctor], [Actor], [Singer], [Professor]  
+FROM  
+(SELECT Name, Occupation   
+    FROM Occupations) AS SourceTable  
+PIVOT  
+(  
+MAX(Name)  
+FOR Occupation IN ([Doctor],[Professor],[Singer],[Actor])  
+) AS PivotTable; 
+*/
+/*
+WITH 
+occ(Name, Occupation, Rank) AS
+(SELECT Name, Occupation, RANK() OVER (PARTITION BY Occupation ORDER BY Name) as rr FROM Occupations)
+SELECT occD.Name,occP.Name, occS.Name, occA.Name 
+FROM occ occD, occ occP, occ occS, occ occA
+WHERE occD.Rank=occP.Rank AND occP.Rank=occS.Rank AND occS.Rank=occA.Rank AND
+      occD.Occupation='Doctor' AND occP.Occupation='Professor' AND 
+      occS.Occupation='Singer' AND occA.Occupation='Actor'
+ORDER BY occD.Rank,occP.Rank, occS.Rank, occA.Rank
+*/
+/*
+WITH 
+occ(Name, Occupation, Rank) AS
+(SELECT Name, Occupation, RANK() OVER (PARTITION BY Occupation ORDER BY Name) as rr FROM Occupations)
+SELECT occD.Name,occP.Name, occS.Name, occA.Name
+FROM occ occP
+FULL OUTER JOIN occ occD
+ON occD.Rank=occP.Rank 
+FULL OUTER JOIN occ occS
+ON occP.Rank=occS.Rank 
+FULL OUTER JOIN occ occA
+ON occP.Rank=occA.Rank AND occS.Occupation='Singer' AND occD.Occupation='Doctor' AND occP.Occupation='Professor' AND occA.Occupation='Actor'
+WHERE 
+      --occD.Occupation='Doctor' AND occP.Occupation='Professor' AND 
+      --occS.Occupation='Singer' 
+      occA.Occupation='Actor'
+--ORDER BY occD.Rank,occP.Rank, occS.Rank, occA.Rank
+*/
+--SELECT Occupation, Name FROM Occupations ORDER BY Occupation
+WITH 
+occD(Name, Occupation, Rank) AS
+(SELECT Name, Occupation, RANK() OVER (PARTITION BY Occupation ORDER BY Name) as rr FROM Occupations WHERE Occupation='Doctor'),
+occP(Name, Occupation, Rank) AS
+(SELECT Name, Occupation, RANK() OVER (PARTITION BY Occupation ORDER BY Name) as rr FROM Occupations WHERE Occupation='Professor'),
+occS(Name, Occupation, Rank) AS
+(SELECT Name, Occupation, RANK() OVER (PARTITION BY Occupation ORDER BY Name) as rr FROM Occupations WHERE Occupation='Singer'),
+occA(Name, Occupation, Rank) AS
+(SELECT Name, Occupation, RANK() OVER (PARTITION BY Occupation ORDER BY Name) as rr FROM Occupations WHERE Occupation='Actor')
+SELECT occD.Name,occP.Name, occS.Name, occA.Name
+FROM occP
+FULL OUTER JOIN occD
+ON occD.Rank=occP.Rank 
+FULL OUTER JOIN occS
+ON occP.Rank=occS.Rank 
+FULL OUTER JOIN occA
+ON occP.Rank=occA.Rank 
+/*
+-- GOOD AND CORRCT USE OF PIVOT:
+SELECT
+    [Doctor], [Professor], [Singer], [Actor]
+FROM
+(
+    SELECT ROW_NUMBER() OVER (PARTITION BY OCCUPATION ORDER BY NAME) [RowNumber], * FROM OCCUPATIONS
+) AS tempTable
+PIVOT
+(
+    MAX(NAME) FOR OCCUPATION IN ([Doctor], [Professor], [Singer], [Actor])
+) AS pivotTable
+*/
+-----------------------------------------------------------------------
+PROJECTS
+-- List the start and end date of ech project. A project consists of consecutive tasks.
+--p2.enddate-p1.startdate=count(p2.taskid) from p3 where p3.startdate>=p1.startdate and p3.enddate<p2.enddate
+-- assign p2.enddate-p1.startdate to this row as like rank
+-- for each task get the record with the max rank by grouping by p2.enddate order by rank
+--
+--You are given a table, Projects, containing three columns: Task_ID, Start_Date and End_Date
+WITH
+cp(p1sd, p2sd, dd) AS ( --<p1,p2> task pairs where the number of days between p1 and p2 is equal to the number of records in between 
+SELECT p1.Start_Date, p2.End_Date, DATEDIFF(day, p1.Start_Date, p2.End_Date) as dd
+FROM Projects p1, Projects p2 
+WHERE p1.Start_Date<=p2.Start_Date AND 
+     DATEDIFF(day, p1.Start_Date, p2.End_Date)=( SELECT COUNT(p3.Task_ID)
+                                                 FROM Projects p3
+                                                 WHERE p3.Start_Date>=p1.Start_Date AND p3.End_Date<=p2.End_Date )
+--ORDER BY p1.Start_Date
+),
+ccp(p1sd,p2sd,dd) AS (  -- get the max ranking record for each task by start date
+SELECT p1sd,p2sd,dd FROM (
+    SELECT p1sd,p2sd,dd, RANK() OVER (PARTITION BY p1sd ORDER BY dd DESC) as rr
+    FROM cp) as rrp
+WHERE rrp.rr=1
+)
+SELECT p1sd,p2sd FROM ( -- get the max ranking record for each task by end date
+    SELECT p1sd,p2sd,dd, RANK() OVER (PARTITION BY p2sd ORDER BY dd DESC) as rr
+    FROM ccp) as rrp
+WHERE rrp.rr=1
+ORDER BY dd, p1sd
+--------------------------------------------------------------------------------
+--Triangles(A,B,C)
+SELECT IIF(A=B AND B=C,'Equilateral',IIF(A+B>C AND A+C>B AND B+C>A,IIF(A=B OR B=C OR A=C,'Isosceles','Scalene'),'Not A Triangle'))
+FROM TRIANGLES
+------------------------------------
